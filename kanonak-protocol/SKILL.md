@@ -91,9 +91,9 @@ resolution is just HTTP, so anyone who can serve a file can publish an ontology.
 
 Before writing anything, decide which of two things you are authoring:
 
-- **Schema** — the model. What a `Book` *is*: classes and the properties they
+- **Schema** — the model. What a `Car` *is*: classes and the properties they
   carry. Changes rarely.
-- **Data** — instances. The actual books on the shelf. Changes constantly.
+- **Data** — instances. The actual cars. Changes constantly.
 
 These belong in **separate packages**, because they have different lifecycles.
 Bundled together, every routine data update forces a new version of the schema,
@@ -103,158 +103,7 @@ versions at its own pace and many data packages can share one schema.
 (If you know the description-logic terms, this is TBox vs. ABox. The protocol
 just calls it schema and data.)
 
-### The schema package
-
-`bookshelf/1.0.0.kan.yml` — classes and properties, no content.
-
-```yaml
-bookshelf:
-  type: Package
-  publisher: example.com
-  version: 1.0.0
-  label: Bookshelf
-  comment: The schema — what a book and an author are.
-  imports:
-    - publisher: kanonak.org
-      packages:
-        - package: core-rdf
-          match: ^
-          version: 1.0.0
-          alias: rdfs
-        - package: core-owl
-          match: ^
-          version: 2.0.0
-          alias: owl
-        - package: core-xsd
-          match: ^
-          version: 1.0.0
-          alias: xsd
-
-Author:
-  type: rdfs.Class
-  label: Author
-  comment: A person who writes books.
-
-Book:
-  type: rdfs.Class
-  label: Book
-  comment: A published book.
-
-Format:
-  type: rdfs.Class
-  owl.oneOf: [ hardcover, paperback, ebook ]
-  label: Format
-  comment: The fixed set of formats a book is published in.
-
-hardcover:
-  type: Format
-  label: Hardcover
-
-paperback:
-  type: Format
-  label: Paperback
-
-ebook:
-  type: Format
-  label: E-book
-
-authorName:
-  type: owl.DatatypeProperty
-  domain: Author
-  range: xsd.string
-  label: Name
-  comment: The author's full name.
-
-title:
-  type: owl.DatatypeProperty
-  domain: Book
-  range: xsd.string
-  label: Title
-  comment: The book's title.
-
-writtenBy:
-  type: owl.ObjectProperty
-  domain: Book
-  range: Author
-  label: Written By
-  comment: The author who wrote this book.
-
-format:
-  type: owl.ObjectProperty
-  domain: Book
-  range: Format
-  label: Format
-  comment: The format this book was published in.
-```
-
-### The data package
-
-`bookshelf-library/1.0.0.kan.yml` — imports the schema, asserts instances of
-its classes. Nothing else.
-
-```yaml
-bookshelf-library:
-  type: Package
-  publisher: example.com
-  version: 1.0.0
-  label: Bookshelf Library
-  comment: The data — actual books and authors, asserted against the schema.
-  imports:
-    - publisher: example.com
-      packages:
-        - package: bookshelf
-          match: ^
-          version: 1.0.0
-          alias: bs
-
-ursula-le-guin:
-  type: bs.Author
-  bs.authorName: Ursula K. Le Guin
-
-a-wizard-of-earthsea:
-  type: bs.Book
-  bs.title: A Wizard of Earthsea
-  bs.writtenBy: ursula-le-guin
-  bs.format: bs.ebook
-```
-
-Both files together validate with zero errors. The parser merges them into one
-logical graph at load time, so a consumer that loads both sees `Book` and its
-instances as a single connected model.
-
-### Reading these
-
-- **The first key is the package header.** Its name matches the directory. It
-  declares `publisher`, `version`, and `imports`.
-- **Every other top-level key is a resource.** What it *is* comes from its
-  `type`.
-- **Imports get a document-local `alias`.** `rdfs` is just this file's nickname
-  for `kanonak.org/core-rdf`; `bs` is the data package's nickname for the
-  schema. Another document may pick different names for the same packages.
-  Aliases are never global — always resolve them through the file's own
-  `imports` block.
-- **`match: ^`** is the semver operator: accept any compatible version at or
-  above `1.0.0`. `~` is minor-compatible, `=` is exact, `*` is any.
-- **Unprefixed names are local; prefixed names cross a package boundary.** In
-  the schema, `range: Author` means the `Author` in that same file. In the data
-  package, `type: bs.Book` reaches into the imported schema.
-
-### The one exception: enumerations
-
-`Format` above is a class *with* named individuals, sitting in the schema — and
-that is correct. A closed, fixed set of members (formats, statuses, categories,
-units) is part of the model, not data.
-
-The protocol never guesses which is which. An individual is schema **only** when
-explicitly marked: `owl.oneOf` on the class for a closed set of named members,
-or `sh.in` on a property for a closed set of literal values. A class that merely
-happens to have instances is not an enumeration — its instances are data.
-
-So: `hardcover` is schema because `Format` declares `owl.oneOf`.
-`a-wizard-of-earthsea` is data because `Book` does not.
-
-Small vocabularies may legitimately mix a few canonical instances into the
-schema package. At any real scale, keep them apart.
+The session below builds both, in that order.
 
 ## What building one looks like
 
@@ -417,6 +266,41 @@ the ontology is *for* before choosing classes. The answer is what decides which
 things are enumerations and which are data, and that decision is far cheaper to
 make now than to unpick after the schema is published.
 
+### Reading those two files
+
+- **The first key is the package header.** Its name matches the directory. It
+  declares `publisher`, `version`, and `imports`.
+- **Every other top-level key is a resource.** What it *is* comes from its
+  `type`.
+- **Imports get a document-local `alias`.** `rdfs` is just that file's nickname
+  for `kanonak.org/core-rdf`; `c` is the inventory's nickname for the schema.
+  Another document may pick different names for the same packages. Aliases are
+  never global — always resolve them through the file's own `imports` block.
+- **`match: ^`** is the semver operator: accept any compatible version at or
+  above `1.0.0`. `~` is minor-compatible, `=` is exact, `*` is any.
+- **Unprefixed names are local; prefixed names cross a package boundary.** In
+  the schema, `range: Manufacturer` means the `Manufacturer` in that same file.
+  In the inventory, `type: c.Car` reaches into the imported schema.
+- **The parser merges the two into one logical graph** at load time, so anything
+  loading both sees `Car` and its instances as a single connected model.
+
+### Why FuelType sits in the schema
+
+`FuelType` is a class *with* named individuals, living in the schema — and that
+is correct. A closed, fixed set of members (fuel types, statuses, categories,
+units) is part of the model, not data.
+
+The protocol never guesses which is which. An individual is schema **only** when
+explicitly marked: `owl.oneOf` on the class for a closed set of named members,
+or `sh.in` on a property for a closed set of literal values. A class that merely
+happens to have instances is not an enumeration — its instances are data.
+
+So `petrol` is schema because `FuelType` declares `owl.oneOf`. `golf-gti` is
+data because `Car` does not.
+
+Small vocabularies may legitimately mix a few canonical instances into the
+schema package. At any real scale, keep them apart.
+
 ## Get the CLI
 
 ```bash
@@ -432,7 +316,7 @@ disagrees with it, believe `--help`.
 Write, validate, read the error, fix, repeat:
 
 ```bash
-kanonak validate bookshelf/1.0.0.kan.yml
+kanonak validate cars/1.0.0.kan.yml
 kanonak validate .
 ```
 
@@ -445,11 +329,11 @@ reference, fetching published packages over HTTP from their publisher domains.
 A name that does not resolve is an error, with the fix spelled out:
 
 ```
-example.com/bookshelf-library@1.0.0:
-  ERROR: Reference to 'audiobook' in 'format' could not be resolved
-    -> The entity 'example.com/bookshelf/audiobook' is not defined in this
+example.com/cars-inventory@1.0.0:
+  ERROR: Reference to 'hydrogen' in 'fuel' could not be resolved
+    -> The entity 'example.com/cars/hydrogen' is not defined in this
        namespace or any imported namespace.
-  • Import the package that defines it, or check for a typo in 'audiobook'
+  • Import the package that defines it, or check for a typo in 'hydrogen'
   • If it lives in an imported namespace, alias-qualify the reference
 
 2 file(s) validated. 1 error(s), 0 warning(s), 0 info(s).
@@ -461,11 +345,11 @@ Do not work around one by guessing a name or leaving a value as a plain string.
 To see what a published document actually resolved to:
 
 ```bash
-kanonak deps bookshelf/1.0.0.kan.yml
+kanonak deps cars/1.0.0.kan.yml
 ```
 
 ```
-example.com/bookshelf@1.0.0
+example.com/cars@1.0.0
   kanonak.org/core-rdf@1.1.0
   kanonak.org/core-owl@2.2.0
     kanonak.org/core-xsd@1.1.0
@@ -610,7 +494,7 @@ tool calls — `--model <tag>` picks one, `--host <url>` points somewhere else.
   two files, and never derive meaning from a name's prefix. Resolve through the
   file's `imports`.
 - **Identity is the full URI**, not the bare name. Two packages can each define
-  `Author`; they are different things.
+  `Manufacturer`; they are different things.
 - **Published versions are immutable.** Fix a mistake by publishing a new
   version, never by editing one that is already out.
 - **An unresolved reference is an error, not an absence.** If something does not
