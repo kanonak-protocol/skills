@@ -256,6 +256,167 @@ So: `hardcover` is schema because `Format` declares `owl.oneOf`.
 Small vocabularies may legitimately mix a few canonical instances into the
 schema package. At any real scale, keep them apart.
 
+## What building one looks like
+
+A worked session. The shape to aim for is: establish purpose, agree the schema,
+validate, then add data.
+
+---
+
+**AI** — What kind of ontology would you like to build?
+
+**User** — An ontology about cars.
+
+**AI** — Two questions first, because the answers change the shape of the model:
+
+1. What will you do with it — catalogue production models, track individual
+   vehicles, compare specifications?
+2. Is there a fixed set of anything (fuel types, body styles), or is everything
+   open-ended?
+
+**User** — Catalogue production models. Fuel type is a fixed list: petrol,
+diesel, electric.
+
+**AI** — Then `FuelType` is an enumeration and belongs in the schema, while the
+cars themselves are data. Starting with the schema package — classes and
+properties only, no actual cars in it:
+
+```yaml
+cars:
+  type: Package
+  publisher: example.com
+  version: 1.0.0
+  label: Cars
+  comment: The schema — what a car and a manufacturer are.
+  imports:
+    - publisher: kanonak.org
+      packages:
+        - package: core-rdf
+          match: ^
+          version: 1.0.0
+          alias: rdfs
+        - package: core-owl
+          match: ^
+          version: 2.0.0
+          alias: owl
+        - package: core-xsd
+          match: ^
+          version: 1.0.0
+          alias: xsd
+
+Manufacturer:
+  type: rdfs.Class
+  label: Manufacturer
+  comment: A company that builds cars.
+
+Car:
+  type: rdfs.Class
+  label: Car
+  comment: A production car model.
+
+FuelType:
+  type: rdfs.Class
+  owl.oneOf: [ petrol, diesel, electric ]
+  label: Fuel Type
+  comment: The fixed set of fuel types a car runs on.
+
+petrol:
+  type: FuelType
+  label: Petrol
+
+diesel:
+  type: FuelType
+  label: Diesel
+
+electric:
+  type: FuelType
+  label: Electric
+
+manufacturerName:
+  type: owl.DatatypeProperty
+  domain: Manufacturer
+  range: xsd.string
+  label: Name
+
+modelName:
+  type: owl.DatatypeProperty
+  domain: Car
+  range: xsd.string
+  label: Model Name
+
+builtBy:
+  type: owl.ObjectProperty
+  domain: Car
+  range: Manufacturer
+  label: Built By
+
+fuel:
+  type: owl.ObjectProperty
+  domain: Car
+  range: FuelType
+  label: Fuel
+```
+
+```
+$ kanonak validate cars/1.0.0.kan.yml
+1 file(s) validated. 0 error(s), 0 warning(s), 0 info(s).
+```
+
+`FuelType` carries `owl.oneOf`, so its three members are part of the model.
+`Car` carries no such marker, so actual cars are data and belong elsewhere.
+
+**User** — Add the Golf GTI and the ID. Buzz, both Volkswagen.
+
+**AI** — Those are data, so they go in their own package that imports the
+schema:
+
+```yaml
+cars-inventory:
+  type: Package
+  publisher: example.com
+  version: 1.0.0
+  label: Cars Inventory
+  comment: The data — actual car models.
+  imports:
+    - publisher: example.com
+      packages:
+        - package: cars
+          match: ^
+          version: 1.0.0
+          alias: c
+
+volkswagen:
+  type: c.Manufacturer
+  c.manufacturerName: Volkswagen
+
+golf-gti:
+  type: c.Car
+  c.modelName: Golf GTI
+  c.builtBy: volkswagen
+  c.fuel: c.petrol
+
+id-buzz:
+  type: c.Car
+  c.modelName: ID. Buzz
+  c.builtBy: volkswagen
+  c.fuel: c.electric
+```
+
+```
+$ kanonak validate .
+2 file(s) validated. 0 error(s), 0 warning(s), 0 info(s).
+```
+
+The inventory can now grow — new models, new manufacturers — without the schema
+leaving 1.0.0.
+
+---
+
+Follow that order: **purpose → schema → validate → data → validate.** Ask what
+the ontology is *for* before choosing classes. The answer is what decides which
+things are enumerations and which are data, and that decision is far cheaper to
+make now than to unpick after the schema is published.
+
 ## Get the CLI
 
 ```bash
