@@ -474,6 +474,15 @@ imported packages too, `--scope kanonak.org/look@` to narrow to a namespace, or
 `--type <publisher/package/Name>` to list instances of a class. Prefer this over
 grepping `.kan.yml` files — it searches the resolved graph, not raw text.
 
+The first `-q` run lazily downloads a small embedding model from Hugging Face —
+`Xenova/all-MiniLM-L6-v2`, 8-bit quantized, about 23 MB — into
+`~/.kanonak/models`, and reuses it thereafter. Embeddings are cached by content
+hash, so re-running over an unchanged workspace does not re-embed. Inference is
+local; that one-time download is the only network access, and your queries never
+leave the machine. The runtime (`@huggingface/transformers`) is an optional
+dependency, so if it is missing the command fails with an install hint rather
+than quietly falling back to something worse.
+
 `kanonak ask` runs a local model through Ollama to answer questions about your
 packages, and it can drive the CLI on your behalf. Reads run freely; anything
 that changes state stops for a y/N first:
