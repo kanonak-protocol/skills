@@ -24,15 +24,57 @@ publisher/package@version/name
 kanonak.org/core-rdf@1.1.0/Class
 ```
 
-That URI maps directly onto a URL you can fetch:
+Two different URLs come off that URI, and it matters that you keep them apart.
+
+### The canonical resource URL
+
+Pure structural substitution — swap `@` for `/`, prefix `https://`:
 
 ```
+https://kanonak.org/core-rdf/1.1.0/Class
+```
+
+This mapping is bijective and never requires asking the publisher anything, in
+either direction. It is also the page a browser renders. Five forms address
+every target, and publishers may not invent others:
+
+```
+/                              publisher
+/{package}                     package, any version
+/{package}/{version}           package, pinned
+/{package}/{name}              resource, any version
+/{package}/{version}/{name}    resource, pinned
+```
+
+### The package source URL
+
+Where the raw YAML *bytes* live. That is a separate question, and the answer is
+publisher-configurable. The default:
+
+```
+https://{publisher}/{package}/{version}.kan.yml
 https://kanonak.org/core-rdf/1.1.0.kan.yml
 ```
 
-A package is a **single YAML file** named `<version>.kan.yml`, living in a
-directory named after the package. Resolution is just HTTP — nothing else.
-Anyone who can serve a file can publish an ontology.
+But a publisher can advertise a different layout in `.well-known/kanonak.json`:
+
+```json
+{
+  "version": 1,
+  "package_url_template": "https://cdn.example.com/kanonak/{package}-{version}.yaml"
+}
+```
+
+When `package_url_template` is present it wins. The only contract is that
+filling `{publisher}`, `{package}`, and `{version}` yields an `https://` URL
+whose body is the package source — host, path shape, separators, and file
+extension are all free. Publishers use this to delegate hosting to a CDN. When
+the config is absent, or omits the field, the default template applies.
+
+**So: derive canonical resource URLs freely, but never hardcode a source URL for
+a publisher you do not control.** Let the CLI resolve it — it reads the
+publisher's config for you. A package is one YAML file per version, and
+resolution is just HTTP, so anyone who can serve a file can publish an ontology.
 
 ## Separate the schema from the data
 
@@ -270,14 +312,18 @@ read it:
 kanonak install kanonak.org/ontology-conventions
 ```
 
-It lands in `~/.kanonak/packages/kanonak.org/`. Without the CLI, fetch the
-same content directly:
+It lands in `~/.kanonak/packages/kanonak.org/`. Without the CLI, read the
+rendered page — a canonical resource URL, so it is always derivable:
+
+<https://kanonak.org/ontology-conventions/ontology-conventions-spec>
+
+Or fetch the source directly. kanonak.org serves at the default template, so
+this works — but confirm `.well-known/kanonak.json` first for any publisher
+whose layout you have not checked:
 
 ```bash
 curl https://kanonak.org/ontology-conventions/1.1.0.kan.yml
 ```
-
-Or read the rendered page: <https://kanonak.org/ontology-conventions/ontology-conventions-spec>
 
 Each guide is a `Protocol` resource with a `hasConvention` block. Every
 convention carries required and recommended rules, each with a `rationale`,
@@ -296,8 +342,8 @@ fragments and query strings, publisher/package/resource naming, versioning and
 file naming, import operators and version resolution, the type system,
 embedding, references, hierarchy, and the canonical structural hash.
 
-Available versions for any package are listed at
-`https://kanonak.org/<package>/`.
+Available versions for any package are listed at its canonical package URL —
+`https://kanonak.org/ontology-conventions` for this one.
 
 ## Styling with look
 
@@ -340,5 +386,9 @@ kanonak serve
 - **An unresolved reference is an error, not an absence.** If something does not
   resolve, that is a bug to surface — do not work around it by guessing or by
   falling back to a string.
+- **Do not assume where a publisher's source files live.** `<package>/<version>.kan.yml`
+  is the default, not a guarantee — `.well-known/kanonak.json` can point source
+  bytes anywhere. Canonical *resource* URLs are always structural; *source* URLs
+  are not.
 - **Check the `.kan.yml` before assuming a package's shape.** Fetching it is one
   HTTP request and settles the question.
