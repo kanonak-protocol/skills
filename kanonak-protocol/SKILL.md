@@ -61,7 +61,7 @@ But a publisher can advertise a different layout in `.well-known/kanonak.json`:
 ```json
 {
   "version": 1,
-  "package_url_template": "https://cdn.example.com/kanonak/{package}-{version}.yaml"
+  "package_url_template": "https://cdn.example.com/kanonak/{publisher}/{package}-{version}.yaml"
 }
 ```
 
@@ -70,6 +70,10 @@ filling `{publisher}`, `{package}`, and `{version}` yields an `https://` URL
 whose body is the package source — host, path shape, separators, and file
 extension are all free. Publishers use this to delegate hosting to a CDN. When
 the config is absent, or omits the field, the default template applies.
+
+Include all three placeholders, `{publisher}` especially. A delegated host
+usually serves more than one publisher, and a template that omits `{publisher}`
+stops being self-describing the moment it does.
 
 **So: derive canonical resource URLs freely, but never hardcode a source URL for
 a publisher you do not control.** Let the CLI resolve it — it reads the
