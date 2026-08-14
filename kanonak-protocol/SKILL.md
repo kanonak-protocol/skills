@@ -65,37 +65,22 @@ But a publisher can advertise a different layout in `.well-known/kanonak.json`:
 }
 ```
 
-When `package_url_template` is present it wins. The only contract is that
-filling `{publisher}`, `{package}`, and `{version}` yields an `https://` URL
-whose body is the package source — host, path shape, separators, and file
-extension are all free. Publishers use this to delegate hosting to a CDN. When
-the config is absent, or omits the field, the default template applies.
+When `package_url_template` is present it wins. The contract is that filling
+`{publisher}`, `{package}`, and `{version}` yields an `https://` URL whose body
+is the package source. Beyond that, host, path shape, separators, and file
+extension are all free — which is what lets a publisher delegate hosting to a
+CDN. When the config is absent, or omits the field, the default template
+applies.
 
-Whether you need `{publisher}` depends on how many publishers the template has
-to serve.
-
-**One publisher.** A config is fetched from
-`https://{publisher}/.well-known/kanonak.json`, so it already governs exactly
-one publisher — context establishes it. Such a template can omit `{publisher}`,
-or hardcode its own segment:
-
-```
-https://cdn.example.com/kanonak/acme-corp/{package}-{version}.yaml
-```
-
-**Many publishers.** The moment one template string has to resolve for more than
-one publisher, `{publisher}` becomes load-bearing — a shared archive that
-namespaces by publisher, a multi-tenant host serving the same config to every
-tenant, or a server handing one configured template to several hosted
-publishers. The protocol's own default is exactly this case, which is why it
-carries the placeholder:
+A template MUST use all three placeholders — `{publisher}`, `{package}`, and
+`{version}`. Do not hardcode any of them, even when a value looks fixed for
+your own site. A template that carries all three resolves for any publisher,
+which is what lets the same shape serve a shared archive, a multi-tenant host,
+or the protocol's own default:
 
 ```
 https://{publisher}/{package}/{version}.kan.yml
 ```
-
-That default also applies to any publisher whose config is missing the field
-entirely, so it must work for publishers it has never seen.
 
 **So: derive canonical resource URLs freely, but never hardcode a source URL for
 a publisher you do not control.** Let the CLI resolve it — it reads the
