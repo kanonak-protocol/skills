@@ -61,7 +61,7 @@ But a publisher can advertise a different layout in `.well-known/kanonak.json`:
 ```json
 {
   "version": 1,
-  "package_url_template": "https://cdn.example.com/kanonak/{publisher}/{package}-{version}.yaml"
+  "package_url_template": "https://cdn.example.com/{publisher}/{package}-{version}.yaml"
 }
 ```
 
