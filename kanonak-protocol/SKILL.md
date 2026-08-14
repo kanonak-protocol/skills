@@ -536,12 +536,70 @@ It covers: choosing an approach; styling types rather than instances; the
 resource view; path carrier bands; visual identity; display lenses; and the
 cascade and its universal floor.
 
-The vocabulary itself is `kanonak.org/look`. To render locally:
+The vocabulary itself is `kanonak.org/look`.
+
+### Seeing it
+
+Styling is not something to do blind. `kanonak serve` renders your workspace
+live — the same rendering `kanonak publish` produces — so you can watch a
+package in a browser as you style it:
 
 ```bash
-kanonak derive <resource-uri>
-kanonak serve
+kanonak serve --watch
 ```
+
+Then open <http://localhost:8080>. `--watch` reloads on `.kan.yml` changes, so
+the loop is edit, save, refresh.
+
+There are two modes, and the URL shape differs between them:
+
+- **Open world** (the default) — serves any publisher, so the publisher is part
+  of the path: `/{publisher}/{package}/{version}/{resource}`, for example
+  `/example.com/cars/1.0.0/Car`.
+- **Closed world** (`--publisher example.com`) — serves that one publisher at
+  the canonical five-form URLs, mirroring what the published site looks like:
+  `/cars/1.0.0/Car`.
+
+If a resource 404s in the default mode, a missing publisher segment is usually
+why.
+
+To write a single rendered artifact to disk instead of serving, use
+`kanonak derive <resource-uri>`.
+
+## Finding things, and getting help
+
+`kanonak search -q` searches your workspace *semantically* — by meaning, not
+literal keyword — which is the quickest way to check whether something is
+already modelled before you add it again:
+
+```bash
+kanonak search -q "fuel"
+```
+
+```
+  0.708  Fuel  (ObjectProperty)
+         example.com/cars/fuel
+  0.681  Petrol  (FuelType)
+         example.com/cars/petrol
+  0.467  Fuel Type  (Class)
+         example.com/cars/FuelType
+```
+
+By default it indexes only your workspace's own resources. Add `--all` to index
+imported packages too, `--scope kanonak.org/look@` to narrow to a namespace, or
+`--type <publisher/package/Name>` to list instances of a class. Prefer this over
+grepping `.kan.yml` files — it searches the resolved graph, not raw text.
+
+`kanonak ask` runs a local model through Ollama to answer questions about your
+packages, and it can drive the CLI on your behalf. Reads run freely; anything
+that changes state stops for a y/N first:
+
+```bash
+kanonak ask "which packages define a class about fuel?"
+```
+
+It needs Ollama reachable at `http://localhost:11434` and a model that supports
+tool calls — `--model <tag>` picks one, `--host <url>` points somewhere else.
 
 ## Things that trip people up
 
