@@ -71,9 +71,16 @@ whose body is the package source — host, path shape, separators, and file
 extension are all free. Publishers use this to delegate hosting to a CDN. When
 the config is absent, or omits the field, the default template applies.
 
-Include all three placeholders, `{publisher}` especially. A delegated host
-usually serves more than one publisher, and a template that omits `{publisher}`
-stops being self-describing the moment it does.
+None of the three placeholders is mandatory. A config only ever governs the
+publisher that serves it — it was fetched from `https://{publisher}/.well-known/kanonak.json`,
+so the publisher is already established by context. A publisher on a shared host
+can equally write its own segment literally:
+
+```
+https://cdn.example.com/kanonak/acme-corp/{package}-{version}.yaml
+```
+
+Use whichever reads better. The template just has to produce the right URL.
 
 **So: derive canonical resource URLs freely, but never hardcode a source URL for
 a publisher you do not control.** Let the CLI resolve it — it reads the
