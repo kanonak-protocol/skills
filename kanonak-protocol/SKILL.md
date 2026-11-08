@@ -120,13 +120,13 @@ validate, then add data.
 
 1. What will you do with it — catalogue production models, track individual
    vehicles, compare specifications?
-2. Is there a fixed set of anything (fuel types, body styles), or is everything
+2. Is there a fixed set of anything (fuels, body styles), or is everything
    open-ended?
 
 **User** — Catalogue production models. Fuel type is a fixed list: petrol,
 diesel, electric.
 
-**AI** — Then `FuelType` is an enumeration and belongs in the schema, while the
+**AI** — Then `Fuel` is an enumeration and belongs in the schema, while the
 cars themselves are data. Starting with the schema package — classes and
 properties only, no actual cars in it:
 
@@ -163,22 +163,22 @@ Car:
   label: Car
   comment: A production car model.
 
-FuelType:
+Fuel:
   type: rdfs.Class
   owl.oneOf: [ petrol, diesel, electric ]
-  label: Fuel Type
-  comment: The fixed set of fuel types a car runs on.
+  label: Fuel
+  comment: A fuel a car runs on, one of a fixed set.
 
 petrol:
-  type: FuelType
+  type: Fuel
   label: Petrol
 
 diesel:
-  type: FuelType
+  type: Fuel
   label: Diesel
 
 electric:
-  type: FuelType
+  type: Fuel
   label: Electric
 
 manufacturerName:
@@ -202,7 +202,7 @@ builtBy:
 fuel:
   type: owl.ObjectProperty
   domain: Car
-  range: FuelType
+  range: Fuel
   label: Fuel
 ```
 
@@ -211,7 +211,7 @@ $ kanonak validate cars/1.0.0.kan.yml
 1 file(s) validated. 0 error(s), 0 warning(s), 0 info(s).
 ```
 
-`FuelType` carries `owl.oneOf`, so its three members are part of the model.
+`Fuel` carries `owl.oneOf`, so its three members are part of the model.
 `Car` carries no such marker, so actual cars are data and belong elsewhere.
 
 **User** — Add the Golf GTI and the ID. Buzz, both Volkswagen.
@@ -284,19 +284,23 @@ make now than to unpick after the schema is published.
 - **The parser merges the two into one logical graph** at load time, so anything
   loading both sees `Car` and its instances as a single connected model.
 
-### Why FuelType sits in the schema
+### Why Fuel sits in the schema
 
-`FuelType` is a class *with* named individuals, living in the schema — and that
-is correct. A closed, fixed set of members (fuel types, statuses, categories,
-units) is part of the model, not data.
+`Fuel` is a class *with* named individuals, living in the schema — and that
+is correct. A closed, fixed set of members (fuels, statuses, currencies, units)
+is part of the model, not data.
 
 The protocol never guesses which is which. An individual is schema **only** when
 explicitly marked: `owl.oneOf` on the class for a closed set of named members,
 or `sh.in` on a property for a closed set of literal values. A class that merely
 happens to have instances is not an enumeration — its instances are data.
 
-So `petrol` is schema because `FuelType` declares `owl.oneOf`. `golf-gti` is
+So `petrol` is schema because `Fuel` declares `owl.oneOf`. `golf-gti` is
 data because `Car` does not.
+
+The class is named for what each member is: petrol is a fuel, so `Fuel`, never
+`FuelType`. Appending `Type`, `Class`, `Category` or `Kind` only says again that
+it's a class (ontology-conventions' `class-named-for-its-instances-rule`).
 
 Small vocabularies may legitimately mix a few canonical instances into the
 schema package. At any real scale, keep them apart.
@@ -472,12 +476,12 @@ kanonak search -q "fuel"
 ```
 
 ```
-  0.708  Fuel  (ObjectProperty)
-         example.com/cars/fuel
-  0.681  Petrol  (FuelType)
+  0.773  Petrol  (Fuel)
          example.com/cars/petrol
-  0.467  Fuel Type  (Class)
-         example.com/cars/FuelType
+  0.711  Fuel  (ObjectProperty)
+         example.com/cars/fuel
+  0.587  Fuel  (Class)
+         example.com/cars/Fuel
 ```
 
 By default it indexes only your workspace's own resources. Add `--all` to index
