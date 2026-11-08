@@ -140,6 +140,9 @@ cars:
   imports:
     - publisher: kanonak.org
       packages:
+        - package: core-kanonak
+          match: ^
+          version: 2.0.0
         - package: core-rdf
           match: ^
           version: 1.0.0
@@ -227,6 +230,14 @@ cars-inventory:
   label: Cars Inventory
   comment: The data — actual car models.
   imports:
+    - publisher: kanonak.org
+      packages:
+        - package: core-kanonak
+          match: ^
+          version: 2.0.0
+        - package: core-rdf
+          match: ^
+          version: 1.0.0
     - publisher: example.com
       packages:
         - package: cars
@@ -276,6 +287,11 @@ make now than to unpick after the schema is published.
   for `kanonak.org/core-rdf`; `c` is the inventory's nickname for the schema.
   Another document may pick different names for the same packages. Aliases are
   never global — always resolve them through the file's own `imports` block.
+- **Import the home of every built-in term you name.** `Package` is
+  core-kanonak's, and `type`, `label` and `comment` are core-rdf's, so both
+  files import those two packages. Without the import, validate warns that
+  the term's version comes from the closure or the client, not from the text
+  (`builtin-import-rule`).
 - **`match: ^`** is the semver operator: accept any compatible version at or
   above `1.0.0`. `~` is minor-compatible, `=` is exact, `*` is any.
 - **Unprefixed names are local; prefixed names cross a package boundary.** In
@@ -339,6 +355,7 @@ example.com/cars-inventory@1.0.0:
        namespace or any imported namespace.
   • Import the package that defines it, or check for a typo in 'hydrogen'
   • If it lives in an imported namespace, alias-qualify the reference
+  • example.com/cars was read at 1.0.0, the newest cars ^ 1.0.0 as c admits
 
 2 file(s) validated. 1 error(s), 0 warning(s), 0 info(s).
 ```
